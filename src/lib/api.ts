@@ -2,6 +2,12 @@
 const BASE_URL = import.meta.env.VITE_API_URL || 
   (import.meta.env.DEV ? 'http://127.0.0.1:8000' : 'https://farm-genius-advanced.onrender.com');
 
+if (import.meta.env.DEV) {
+  console.log('DEBUG: Running in DEVELOPMENT mode, using BASE_URL:', BASE_URL);
+} else {
+  console.log('DEBUG: Running in PRODUCTION mode, using BASE_URL:', BASE_URL);
+}
+
 function getToken(): string | null {
   return localStorage.getItem('farmgenius_token');
 }

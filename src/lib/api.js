@@ -1,5 +1,12 @@
 // Central API client — all calls go through here
-const BASE_URL = 'http://localhost:8000';
+const BASE_URL = import.meta.env.VITE_API_URL || 
+  (import.meta.env.DEV ? 'http://127.0.0.1:8000' : 'https://farm-genius-advanced.onrender.com');
+
+if (import.meta.env.DEV) {
+  console.log('DEBUG (JS): Running in DEVELOPMENT mode, using BASE_URL:', BASE_URL);
+} else {
+  console.log('DEBUG (JS): Running in PRODUCTION mode, using BASE_URL:', BASE_URL);
+}
 
 function getToken() {
   return localStorage.getItem('farmgenius_token');
