@@ -1,5 +1,6 @@
 // Central API client — all calls go through here
-const BASE_URL = import.meta.env.VITE_API_URL || 'http://127.0.0.1:8000';
+const BASE_URL = import.meta.env.VITE_API_URL || 
+  (import.meta.env.DEV ? 'http://127.0.0.1:8000' : 'https://farm-genius-advanced.onrender.com');
 
 function getToken(): string | null {
   return localStorage.getItem('farmgenius_token');
