@@ -44,8 +44,8 @@ origins = [
 
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["*"], # Allow all for production; Render often has varying subdomains
-    allow_credentials=True,
+    allow_origins=["*"],
+    allow_credentials=False, # Must be False if allow_origins is ["*"]
     allow_methods=["*"],
     allow_headers=["*"],
 )

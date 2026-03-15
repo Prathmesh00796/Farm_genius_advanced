@@ -24,6 +24,7 @@ async function request<T>(
       const err = await res.json();
       detail = err.detail || detail;
     } catch { /* ignore */ }
+    console.error(`API Error (${path}):`, detail);
     throw new Error(detail);
   }
 
