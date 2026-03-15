@@ -42,13 +42,15 @@ class DiseasePredictor:
     def _load_model(self):
         try:
             if MODEL_PATH.exists() and self.class_names:
-                # Initialize ResNet18 architecture
-                self.model = models.resnet18()
+                # Initialize DenseNet121 architecture
+                self.model = models.densenet121()
                 num_classes = len(self.class_names)
-                num_ftrs = self.model.fc.in_features
-                self.model.fc = nn.Sequential(
-                    nn.Dropout(p=0.3),
-                    nn.Linear(num_ftrs, num_classes),
+                num_ftrs = self.model.classifier.in_features
+                self.model.classifier = nn.Sequential(
+                    nn.Linear(num_ftrs, 512),
+                    nn.ReLU(),
+                    nn.Dropout(0.2),
+                    nn.Linear(512, num_classes)
                 )
                 
                 # Load weights
@@ -56,7 +58,7 @@ class DiseasePredictor:
                 self.model.load_state_dict(state_dict)
                 self.model.to(self.device)
                 self.model.eval()
-                print(f"✓ ResNet18 model loaded successfully ({len(self.class_names)} classes)")
+                print(f"✓ DenseNet121 model loaded successfully ({len(self.class_names)} classes)")
         except Exception as e:
             print(f"Error loading model: {e}")
             self.model = None
