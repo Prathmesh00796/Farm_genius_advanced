@@ -64,6 +64,10 @@ app.include_router(chat.router)
 app.include_router(dealer.router)
 app.include_router(ai.router)
 
+@app.get("/")
+def root():
+    return {"message": "FarmGenius API is live!", "health_check": "/api/health"}
+
 @app.get("/api/health")
 def health():
     return {"status": "ok"}
