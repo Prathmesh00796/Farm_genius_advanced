@@ -302,7 +302,7 @@ const CropScan = () => {
                       <ul className="space-y-2">
                         {(result.preventive_measures || []).map((rec, i) => (
                           <li key={i} className="flex items-start gap-2 text-sm">
-                            <CheckCircle2 className="h-4 w-4 text-primary mt-0.5 flex-shrink-0" />
+                            <ShieldAlert className="h-4 w-4 text-amber-600 mt-0.5 flex-shrink-0" />
                             <span>{rec}</span>
                           </li>
                         ))}
@@ -310,27 +310,28 @@ const CropScan = () => {
                     )}
                   </div>
 
-                  {/* Extra info */}
-                  {(result.economic_impact || result.best_time_to_spray || result.when_to_consult_expert) && (
-                    <div className="bg-muted/50 rounded-lg p-3 space-y-2">
-                      {result.economic_impact && (
-                        <p className="text-xs text-muted-foreground">
-                          <span className="font-medium text-foreground">Economic impact: </span>
-                          {result.economic_impact}
-                        </p>
-                      )}
-                      {result.best_time_to_spray && (
-                        <p className="text-xs text-muted-foreground">
-                          <span className="font-medium text-foreground">Best spray time: </span>
-                          {result.best_time_to_spray}
-                        </p>
-                      )}
-                      {result.when_to_consult_expert && (
-                        <p className="text-xs text-muted-foreground">
-                          <span className="font-medium text-foreground">Consult KVK/officer when: </span>
-                          {result.when_to_consult_expert}
-                        </p>
-                      )}
+                  {/* Impact & Conditions */}
+                  <div className="grid grid-cols-2 gap-4 pt-2">
+                    <div className="bg-primary/5 border border-primary/10 rounded-2xl p-4 transition-all hover:shadow-md">
+                      <h5 className="text-[10px] uppercase tracking-widest font-bold text-primary mb-1">Impact</h5>
+                      <p className="text-xs font-semibold text-foreground leading-tight">{result.economic_impact || 'Moderate loss'}</p>
+                    </div>
+                    <div className="bg-secondary/5 border border-secondary/10 rounded-2xl p-4 transition-all hover:shadow-md">
+                      <h5 className="text-[10px] uppercase tracking-widest font-bold text-secondary mb-1">Spray Time</h5>
+                      <p className="text-xs font-semibold text-foreground leading-tight">{result.best_time_to_spray || 'Early Morning'}</p>
+                    </div>
+                  </div>
+
+                  {/* Consultation alert */}
+                  {result.when_to_consult_expert && (
+                    <div className="flex items-center gap-3 p-4 bg-amber-50 border border-amber-100 rounded-2xl animate-pulse-slow">
+                      <div className="flex-shrink-0 h-10 w-10 flex items-center justify-center rounded-xl bg-amber-100 text-amber-600">
+                        <Info className="h-5 w-5" />
+                      </div>
+                      <div>
+                        <h5 className="text-[10px] uppercase tracking-widest font-bold text-amber-700">Expert Consultation</h5>
+                        <p className="text-xs font-medium text-amber-900 leading-tight">{result.when_to_consult_expert}</p>
+                      </div>
                     </div>
                   )}
 

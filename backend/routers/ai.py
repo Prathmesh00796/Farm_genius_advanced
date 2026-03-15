@@ -175,32 +175,30 @@ async def analyze_crop(
         disease_info  = get_disease_info(primary_class, lang)
         
         # Comprehensive prompt for high-quality, brief, and translated report
-        prompt = f"""You are an expert Indian Agricultural Scientist (KVK Officer).
-The plant has been diagnosed with: {disease_info['name_en']} (Technical Name: {primary_class}).
+        prompt = f"""You are a Senior Indian Agricultural Scientist (KVK Officer). 
+A farmer has brought a sample diagnosed with: {disease_info['name_en']} (Technical: {primary_class}).
 
-TASK: Generate a professional, brief, and scientifically accurate diagnostic report in {response_lang}.
-STRICT RULES:
-- ALL fields must be in {response_lang} (except canonical_name).
-- DO NOT use English sentences in the description or recommendations.
-- Provide specific Indian chemical names (e.g., Mancozeb, Hexaconazole) and organic solutions (e.g., Dashparni Ark, Neem Oil).
-- Ensure the 'disease_name' is the standard {response_lang} name.
+TASK: Generate a professional diagnostic report in {response_lang}.
+STRICT SCIENTIFIC PERSONA:
+1. Use standard {response_lang} agricultural terminology (e.g., in Hindi use 'कीटनाशक' instead of 'medicine', 'झुलसा' instead of 'fever').
+2. Provide precise dosage (e.g., 2ml/Liter water).
+3. Do NOT include any English words in the description or treatment fields.
 
 Return ONLY valid JSON:
 {{
   "disease_name": "Standard {response_lang} name",
   "confidence": {primary_conf},
   "severity": "{disease_info.get('severity', 'moderate')}",
-  "affected_parts": "Affected parts in {response_lang}",
-  "description": "3-4 sentence detailed scientific description in {response_lang}",
-  "symptoms": ["Specific {response_lang} symptom 1", "Symptom 2"],
-  "chemical_treatment": ["Fungicide/Pesticide name + exact dose in {response_lang}"],
-  "organic_treatment": ["Organic/Bio-solution in {response_lang}"],
-  "preventive_measures": ["Prevention step in {response_lang}"],
-  "economic_impact": "Yield loss and market impact in {response_lang}",
+  "affected_parts": "Parts in {response_lang}",
+  "description": "Scientific explanation of how the pathogen attacks the plant in {response_lang}",
+  "symptoms": ["Specific visual symptom 1 in {response_lang}", "Symptom 2"],
+  "chemical_treatment": ["Specific fungicide/pesticide + exact dose in {response_lang}"],
+  "organic_treatment": ["Bio-pesticide or traditional method (e.g. Dashparni Ark) in {response_lang}"],
+  "preventive_measures": ["Crop rotation/spacing/seed treatment in {response_lang}"],
+  "economic_impact": "Loss % and quality impact in {response_lang}",
   "spread_risk": "low/medium/high",
-  "best_time_to_spray": "Morning/Evening in {response_lang}",
-  "when_to_consult_expert": "Consultation trigger in {response_lang}",
-  "tts_summary": "Short summary for speech in {response_lang}"
+  "best_time_to_spray": "Morning/Evening conditions in {response_lang}",
+  "tts_summary": "Clear, slow-paced audio summary for the farmer in {response_lang}"
 }}"""
         try:
             # Use the faster chat model
@@ -219,15 +217,15 @@ Return ONLY valid JSON in {response_lang}:
   "severity": "low/medium/high/critical",
   "affected_parts": "Parts in {response_lang}",
   "description": "3-4 sentence scientific summary in {response_lang}",
-  "symptoms": ["Specific {response_lang} symptom"],
-  "chemical_treatment": ["Fungicide + Dose in {response_lang}"],
-  "organic_treatment": ["Bio-method in {response_lang}"],
+  "symptoms": ["Specific {response_lang} visual symptom"],
+  "chemical_treatment": ["Fungicide + exact Dose in {response_lang}"],
+  "organic_treatment": ["Bio-method/Traditional solution in {response_lang}"],
   "preventive_measures": ["Prevention in {response_lang}"],
-  "economic_impact": "Loss % in {response_lang}",
+  "economic_impact": "Loss % and quality impact in {response_lang}",
   "spread_risk": "low/medium/high",
-  "best_time_to_spray": "Morning/Evening in {response_lang}",
-  "when_to_consult_expert": "Consultation trigger in {response_lang}",
-  "tts_summary": "Summary in {response_lang}"
+  "best_time_to_spray": "Morning/Evening conditions in {response_lang}",
+  "when_to_consult_expert": "Damage threshold in {response_lang}",
+  "tts_summary": "Summary for speech in {response_lang}"
 }}"""
         try:
             image_input = req.imageData or req.imageUrl or ""
