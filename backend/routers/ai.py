@@ -140,9 +140,10 @@ async def analyze_crop(
     current_user: models.User = Depends(auth_utils.get_current_user),
 ):
     """
-    PURE LOCAL High-Accuracy Diagnostic System.
-    Uses DenseNet121 (Local) + Local Knowledge Base. 
-    API only used for report enrichment if available.
+    ULTIMATE Hybrid Diagnostic System.
+    1. Tries Local Prediction (DenseNet121)
+    2. IF Local fails (0% or low confidence), it FORCES a high-accuracy Vision AI call.
+    3. Guarantees a result for the user.
     """
     FULL_LANG_MAP = {
         "en": "English", "hi": "Hindi", "mr": "Marathi",
@@ -152,7 +153,7 @@ async def analyze_crop(
     lang = req.language if req.language in FULL_LANG_MAP else "en"
     response_lang = FULL_LANG_MAP[lang]
 
-    # ── 1. Local Model Prediction (Primary) ─────────────────────────────
+    # ── 1. Local Model Prediction ────────────────────────────────────────
     ml_predictions = []
     try:
         if disease_predictor:
@@ -163,16 +164,20 @@ async def analyze_crop(
                 elif image_input.startswith("http"):
                     ml_predictions = disease_predictor.predict_from_url(image_input)
     except Exception as ml_err:
-        print(f"DEBUG: Local ML failed: {ml_err}")
+        print(f"DEBUG ERROR: Local ML model prediction failed: {ml_err}")
 
-    # ── 2. Local Knowledge Retrieval ────────────────────────────────────
+    # ── 2. Determine Strategy (Local vs Vision) ──────────────────────────
     result: dict = {}
-    if ml_predictions and ml_predictions[0]["confidence_pct"] > 5:
+    
+    # We only trust the local model if it has > 15% confidence
+    is_local_confident = ml_predictions and ml_predictions[0]["confidence_pct"] > 15
+
+    if is_local_confident:
         primary_class = ml_predictions[0]["class_name"]
         primary_conf  = ml_predictions[0]["confidence_pct"]
         disease_info  = get_disease_info(primary_class, lang)
         
-        # Build local report from disease_names.py / translations
+        # Initial Local Result
         result = {
             "disease_name": disease_info["name"],
             "canonical_name": primary_class,
@@ -190,11 +195,11 @@ async def analyze_crop(
             "tts_summary": f"Diagnosed with {disease_info['name']}. Please check treatments."
         }
 
-        # ── 3. Optional API Enrichment (Only if Key works) ────────────────
+        # Try to enrich with Text-only AI (cheap and fast)
         try:
             display_name = primary_class.replace("___", " ").replace("__", " ").replace("_", " ")
             prompt = f"""You are a KVK Officer. Generate a professional diagnostic report for {display_name} in {response_lang}. 
-Return ONLY JSON:
+Return ONLY JSON in {response_lang}:
 {{
   "disease_name": "Standard {response_lang} name",
   "description": "Scientific summary in {response_lang}",
@@ -212,40 +217,80 @@ Return ONLY JSON:
             end   = text.rfind("}") + 1
             if start >= 0 and end > start:
                 api_data = json.loads(text[start:end])
-                result.update(api_data) # Update local data with rich AI data
+                result.update(api_data)
         except Exception:
-            pass # Use local data if API fails
+            pass
 
-    # Fallback to Vision AI (Last Resort)
+    # ── 3. Force Vision AI Fallback (If local is 0% or low) ─────────────
     if not result:
+        print("DEBUG: Local model failed or low confidence. FORCING Vision AI call.")
+        vision_prompt = f"""You are a Senior Indian Agricultural Scientist. 
+Identify the crop and disease in this image with 100% accuracy.
+Respond ONLY in {response_lang}. NO ENGLISH.
+
+Return ONLY JSON:
+{{
+  "disease_name": "Standard {response_lang} name",
+  "canonical_name": "Technical English Name",
+  "confidence": 98,
+  "severity": "low/medium/high/critical",
+  "affected_parts": "Affected parts in {response_lang}",
+  "description": "Scientific summary in {response_lang}",
+  "symptoms": ["Symptom in {response_lang}"],
+  "chemical_treatment": ["Fungicide + Dose in {response_lang}"],
+  "organic_treatment": ["Bio-method in {response_lang}"],
+  "preventive_measures": ["Prevention in {response_lang}"],
+  "economic_impact": "Impact in {response_lang}",
+  "best_time_to_spray": "Best time in {response_lang}",
+  "when_to_consult_expert": "Expert trigger in {response_lang}",
+  "tts_summary": "Summary in {response_lang}"
+}}"""
         try:
-            vision_prompt = f"Identify crop disease in {response_lang}. Return JSON with disease_name, description, symptoms, chemical_treatment, organic_treatment, preventive_measures, economic_impact, best_time_to_spray, when_to_consult_expert, tts_summary."
             image_input = req.imageData or req.imageUrl or ""
             text = await call_openrouter_vision(image_input, vision_prompt)
             start = text.find("{")
             end   = text.rfind("}") + 1
             if start >= 0 and end > start:
                 result = json.loads(text[start:end])
-        except Exception:
-            pass
+        except Exception as vision_err:
+            print(f"DEBUG ERROR: Vision AI fallback failed: {vision_err}")
 
-    # Final Fallback
+    # Final emergency fallback if even Vision fails
     if not result:
         result = {
-            "disease_name": "Unknown / Clear",
+            "disease_name": "Analysis Failed",
             "confidence": 0,
-            "severity": "low",
+            "severity": "unknown",
             "affected_parts": "N/A",
-            "description": "Please ensure the photo is clear.",
-            "symptoms": [],
+            "description": "Please ensure the photo is clear and contains a visible plant leaf.",
+            "symptoms": ["Unable to detect disease. Please try again with a better photo."],
             "chemical_treatment": [],
             "organic_treatment": [],
-            "preventive_measures": [],
+            "preventive_measures": ["Ensure the leaf is in focus."],
             "economic_impact": "None",
             "best_time_to_spray": "N/A",
-            "when_to_consult_expert": "Rescan if symptoms appear.",
-            "tts_summary": "No clear disease detected."
+            "when_to_consult_expert": "Consult a local agricultural expert.",
+            "tts_summary": "Analysis failed. Please try again."
         }
+
+    # ── 4. Finalize Multilingual Data ───────────────────────────────────
+    canonical_name = result.get("canonical_name", result.get("disease_name", "Unknown"))
+    all_lang_names: dict[str, str] = {}
+    if canonical_name in DISEASE_TRANSLATIONS:
+        info = DISEASE_TRANSLATIONS[canonical_name]
+        for code in ["en","hi","mr","kn","te","ta","bn","gu","pa","ur"]:
+            all_lang_names[code] = info.get(code, info.get("en", canonical_name))
+    else:
+        dn = result.get("disease_name", canonical_name).replace("_", " ")
+        for code in ["en","hi","mr","kn","te","ta","bn","gu","pa","ur"]:
+            all_lang_names[code] = dn
+
+    result["all_language_names"] = all_lang_names
+    result["tts_lang_code"]      = TTS_LANG_CODES.get(lang, "hi-IN")
+    result["model_used"]         = "Hybrid_DenseNet_Vision_v7"
+    result["top_predictions"]    = ml_predictions or []
+    
+    return result
 
     # ── 4. Multilingual Finalization ────────────────────────────────────
     canonical_name = result.get("canonical_name", result.get("disease_name", "Unknown"))
