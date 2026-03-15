@@ -165,55 +165,84 @@ async def analyze_crop(
     except Exception as ml_err:
         print(f"DEBUG ERROR: Local ML model prediction failed: {ml_err}")
 
-    # ── 2. Get detailed info from AI (Text-only API call) ────────────────
+    # ── 2. Get detailed info from AI (Hybrid Intelligence) ──────────────
     result: dict = {}
-    if ml_predictions:
+    
+    # Use AI for a professional report if local model predicted something 
+    # OR fallback to Vision AI if local model is completely unconfident (0%)
+    use_vision_fallback = not ml_predictions or ml_predictions[0]["confidence_pct"] < 5
+
+    if not use_vision_fallback:
         primary_class = ml_predictions[0]["class_name"]
         primary_conf  = ml_predictions[0]["confidence_pct"]
-        
-        # Human-readable disease name (e.g. Tomato___Early_blight -> Tomato Early Blight)
         display_name = primary_class.replace("___", " ").replace("__", " ").replace("_", " ")
 
         prompt = f"""You are a Senior Indian Agricultural Scientist (KVK Officer).
-DIAGNOSIS: The local model has identified this plant as: {display_name} (Confidence: {primary_conf:.1f}%).
+DIAGNOSIS: The local model identifies this as: {display_name} (Confidence: {primary_conf:.1f}%).
 
 TASK: Generate a professional diagnostic report in {response_lang}.
-STRICT RESPONSE RULES:
+STRICT RULES:
 1. LANGUAGE: Respond ONLY in {response_lang}. 
-2. ZERO ENGLISH: Do not use a single English word in 'description', 'symptoms', or 'treatment'.
-   - Use 'कीटनाशक' instead of 'Pesticide'.
-   - Use 'झुलसा' instead of 'Blight'.
-   - Use 'उपचार' instead of 'Treatment'.
+2. ZERO ENGLISH: No English words in 'description', 'symptoms', or 'treatment'.
 3. ACCURACY: Base your recommendations on Indian ICAR/KVK standards.
 4. DOSAGE: Provide exact measurements (e.g., 2 ग्राम प्रति लीटर पानी).
 
-Return ONLY valid JSON in {response_lang}:
+Return ONLY valid JSON:
 {{
-  "disease_name": "Standard {response_lang} name of the disease",
+  "disease_name": "Standard {response_lang} name",
   "canonical_name": "{primary_class}",
   "confidence": {primary_conf},
   "severity": "low/medium/high/critical",
   "affected_parts": "Parts in {response_lang}",
   "description": "Scientific explanation of {display_name} in 3-4 sentences in {response_lang}",
-  "symptoms": ["Visual symptom 1 in {response_lang}", "Symptom 2"],
+  "symptoms": ["Symptom 1 in {response_lang}", "Symptom 2"],
   "chemical_treatment": ["Fungicide/Pesticide name + EXACT DOSAGE in {response_lang}"],
-  "organic_treatment": ["Traditional Indian solution (e.g., Dashparni Ark) in {response_lang}"],
+  "organic_treatment": ["Traditional Indian solution in {response_lang}"],
   "preventive_measures": ["Cultural practices in {response_lang}"],
-  "economic_impact": "Yield loss and market value impact in {response_lang}",
-  "best_time_to_spray": "Best weather/time for application in {response_lang}",
+  "economic_impact": "Yield/Value impact in {response_lang}",
+  "best_time_to_spray": "Best weather/time in {response_lang}",
   "when_to_consult_expert": "Consultation trigger in {response_lang}",
-  "tts_summary": "Professional audio summary for the farmer in {response_lang}"
+  "tts_summary": "Professional summary in {response_lang}"
 }}"""
 
         try:
-            # Use the faster chat model (Text-only)
             text = await call_openrouter(messages=[{"role": "user", "content": prompt}])
             start = text.find("{")
             end   = text.rfind("}") + 1
             if start >= 0 and end > start:
                 result = json.loads(text[start:end])
         except Exception as e:
-            print(f"DEBUG ERROR: AI report generation failed: {e}")
+            print(f"DEBUG: AI Report Error: {e}")
+
+    # Fallback to direct Vision AI for zero-confidence cases
+    if use_vision_fallback or not result:
+        vision_prompt = f"""Expert Indian Agronomist: Identify crop/disease in {response_lang}.
+Return ONLY valid JSON in {response_lang}:
+{{
+  "disease_name": "Standard {response_lang} name",
+  "canonical_name": "English Technical Name",
+  "confidence": 98,
+  "severity": "low/medium/high/critical",
+  "affected_parts": "Parts in {response_lang}",
+  "description": "Scientific summary in {response_lang}",
+  "symptoms": ["Visual symptom in {response_lang}"],
+  "chemical_treatment": ["Fungicide + Dose in {response_lang}"],
+  "organic_treatment": ["Bio-method in {response_lang}"],
+  "preventive_measures": ["Prevention in {response_lang}"],
+  "economic_impact": "Loss/Impact in {response_lang}",
+  "best_time_to_spray": "Spray time in {response_lang}",
+  "when_to_consult_expert": "Expert trigger in {response_lang}",
+  "tts_summary": "Summary in {response_lang}"
+}}"""
+        try:
+            image_input = req.imageData or req.imageUrl or ""
+            text = await call_openrouter_vision(image_input, vision_prompt)
+            start = text.find("{")
+            end   = text.rfind("}") + 1
+            if start >= 0 and end > start:
+                result = json.loads(text[start:end])
+        except Exception:
+            pass
 
     # Emergency fallback if prediction or AI fails
     if not result:

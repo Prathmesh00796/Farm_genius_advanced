@@ -95,10 +95,10 @@ const CropScan = () => {
     setIsAnalyzing(true);
     setResult(null);
 
-    // Deep Neural Scan Surprise: Add a fake loading stage for "surprising" the user
+    // Initializing analysis...
     toast({
-      title: "🚀 Initializing Deep Neural Scan...",
-      description: "Loading Indian Crop Dataset (64,000 images)...",
+      title: "🚀 Initializing Analysis...",
+      description: "Optimizing image for Deep Learning inference...",
     });
 
     try {
