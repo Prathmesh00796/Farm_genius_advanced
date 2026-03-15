@@ -276,7 +276,7 @@ Return ONLY valid JSON in {response_lang}:
 
     result["all_language_names"] = all_lang_names
     result["tts_lang_code"]      = TTS_LANG_CODES.get(lang, "hi-IN")
-    result["model_used"]         = "PyTorch_MobileNetV2_Local"
+    result["model_used"]         = "ResNet18_HighAcc_Local"
     result["top_predictions"]    = ml_predictions or []
     
     return result

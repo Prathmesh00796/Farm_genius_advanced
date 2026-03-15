@@ -42,17 +42,21 @@ class DiseasePredictor:
     def _load_model(self):
         try:
             if MODEL_PATH.exists() and self.class_names:
-                # Initialize model architecture
-                self.model = models.mobilenet_v2()
+                # Initialize ResNet18 architecture
+                self.model = models.resnet18()
                 num_classes = len(self.class_names)
-                self.model.classifier[1] = nn.Linear(self.model.last_channel, num_classes)
+                num_ftrs = self.model.fc.in_features
+                self.model.fc = nn.Sequential(
+                    nn.Dropout(p=0.3),
+                    nn.Linear(num_ftrs, num_classes),
+                )
                 
                 # Load weights
                 state_dict = torch.load(MODEL_PATH, map_location=self.device)
                 self.model.load_state_dict(state_dict)
                 self.model.to(self.device)
                 self.model.eval()
-                print(f"✓ PyTorch model loaded successfully ({len(self.class_names)} classes)")
+                print(f"✓ ResNet18 model loaded successfully ({len(self.class_names)} classes)")
         except Exception as e:
             print(f"Error loading model: {e}")
             self.model = None
