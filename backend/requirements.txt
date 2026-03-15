@@ -15,5 +15,6 @@ numpy==1.26.4
 gspread==6.1.0
 google-auth==2.29.0
 watchfiles==0.21.0
-torch==2.8.0
-torchvision==0.23.0b 
+--index-url https://download.pytorch.org/whl/cpu
+torch==2.3.0
+torchvision==0.18.0
