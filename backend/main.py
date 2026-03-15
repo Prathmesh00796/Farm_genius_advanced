@@ -6,9 +6,9 @@ import models
 import time
 
 from routers import (
-    auth, profiles, market_prices, nearby_markets, 
-    policies, tips, crop_scans, yield_predictions, 
-    chat, dealer, ai
+    auth, profiles, policies, tips, crop_scans, 
+    yield_predictions, chat, dealer, ai,
+    market_prices, nearby_markets
 )
 
 # 1. Initialize Tables
@@ -63,6 +63,8 @@ app.include_router(yield_predictions.router)
 app.include_router(chat.router)
 app.include_router(dealer.router)
 app.include_router(ai.router)
+app.include_router(market_prices.router)
+app.include_router(nearby_markets.router)
 
 @app.get("/")
 def root():
